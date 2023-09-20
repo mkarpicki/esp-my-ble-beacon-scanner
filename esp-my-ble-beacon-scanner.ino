@@ -1,21 +1,11 @@
+#include <Config.h>
+
+
+
 /*
    Based on Neil Kolban example for IDF: https://github.com/nkolban/esp32-snippets/blob/master/cpp_utils/tests/BLE%20Tests/SampleScan.cpp
    Ported to Arduino ESP32 by Evandro Copercini
 */
-
-//#include <BLEDevice.h>
-//#include <BLEUtils.h>
-//#include <BLEScan.h>
-//#include <BLEAdvertisedDevice.h>
-//
-//int scanTime = 5; //In seconds
-//BLEScan* pBLEScan;
-//
-//class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
-//    void onResult(BLEAdvertisedDevice advertisedDevice) {
-//      Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str());
-//    }
-//};
 
 #include <Arduino.h>
 
@@ -27,26 +17,26 @@
 #include <BLEEddystoneTLM.h>
 #include <BLEBeacon.h>
 
-#define ENDIAN_CHANGE_U16(x) ((((x)&0xFF00) >> 8) + (((x)&0xFF) << 8))
+
+//#define ENDIAN_CHANGE_U16(x) ((((x)&0xFF00) >> 8) + (((x)&0xFF) << 8))
 
 int scanTime = 5; //In seconds
 int scanDelay = 5000; //In miliseconds
 int counter;
+
 BLEScan *pBLEScan;
 
-const char *myBeacons[] = {
 
-  "xx:xx:xx:xx:xx:xx"
-};
+const char **myBeacons = Config::beaconAddresses;
+const unsigned int myBeaconsLen = Config::beaconAddressesLength;
 
-const int myBeaconsLen = (sizeof (myBeacons) / sizeof (*myBeacons)); 
 
 boolean isKnownAddress(BLEAddress address)
 {
    for (counter = 0; counter < myBeaconsLen; counter++) 
    {
 //      Serial.print(address.toString().c_str());
-//      Serial.print(" ");
+//      Serial.print(" mine: ");
 //      Serial.print(myBeacons[counter]);
 //      Serial.println("");
 //      
@@ -109,11 +99,16 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  
   BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
   Serial.print("Devices found: ");
   Serial.println(foundDevices.getCount());
   Serial.println("Scan done!");
   pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
+  
+//  Serial.println("myBeaconsLen");
+//  Serial.println(myBeaconsLen);
+
+
   delay(scanDelay);
 }
