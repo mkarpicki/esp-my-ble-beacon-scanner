@@ -20,7 +20,7 @@ const char* writeApiKey = Config::writeAPIKey;
 //int field1 = 0;
 
 int scanTime = 5; //In seconds
-int scanDelay = 5000; //In miliseconds
+int scanDelay = (1000 * 10); //In miliseconds
 int counter;
 
 BLEScan *pBLEScan;
@@ -106,29 +106,36 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 
       if(isKnownAddress(advertisedDevice.getAddress())) 
       {
-        //ThingSpeak.begin(client);
+
+        String myMac = WiFi.macAddress();
+        String bleAddress = advertisedDevice.getAddress().toString().c_str();
+        String bleName = "";
+        String bleRSSI = "" ;
+        String bleTxPower = ""; 
 
         Serial.print(F("Device address: "));
         //Serial.println(ESP.getEfuseMac());
-        Serial.println(WiFi.macAddress());
+        Serial.println(myMac);
         
-        //Serial.println(advertisedDevice.getAddress().toString().c_str());
-        //ThingSpeak.setField(MAC_ADDRESS, advertisedDevice.getAddress().toString().c_str());
+        Serial.println(advertisedDevice.getAddress().toString().c_str());
         
         if (advertisedDevice.haveName())
         {
+          bleName = advertisedDevice.getName().c_str();
           //Serial.print(F("Device name: "));
           //Serial.println(advertisedDevice.getName().c_str());
         }
   
         if (advertisedDevice.haveRSSI())
         {
+          bleRSSI = String( advertisedDevice.getRSSI() );
           //Serial.print(F("Device RSSI: "));
           //Serial.println(advertisedDevice.getRSSI());
         }      
   
         if (advertisedDevice.haveTXPower())
         {
+          bleTxPower = String(advertisedDevice.getTXPower());
           //Serial.print(F("Device TXPower: "));
           //Serial.println(advertisedDevice.getTXPower());
         }
@@ -136,24 +143,44 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str()); 
 
         // write to the ThingSpeak channel
-//        int thingSpeakResponse = ThingSpeak.writeFields(channelID, writeAPIKey);
-//    
-//        if(thingSpeakResponse){
-//          Serial.println("Channel update successful.");
-//        } else{
-//          Serial.println("Problem updating channel. HTTP error code " + String(thingSpeakResponse));
-//        }
-         
+        send(myMac, bleAddress, bleName, bleRSSI, bleTxPower);
 
       }
     }
 };
 
+
+void send(String myMac, String bleAddress, String bleName, String bleRSSI, String bleTxPower)
+{
+  WiFiClient client;
+  String footer = String(" HTTP/1.1\r\n") + "Host: " + String(host) + "\r\n" + "Connection: close\r\n\r\n";
+
+  if (!client.connect(host, httpPort)) {
+    return;
+  }
+
+  String fieldScannerId = "&field1=" + myMac;
+  String fieldBeaconMacAddress = "&field2=" + bleAddress;
+  String fieldBeaconRSSI = "&field3=" + bleRSSI;
+  String fieldBeaconName = "&field4=" + bleName;
+  String fieldTxPower = "&field5=" + bleTxPower;
+  String fieldTimestamp = "&field6=";
+
+  String query = String("GET /update?api_key=" + String(writeApiKey) + fieldScannerId + fieldBeaconMacAddress + fieldBeaconRSSI +fieldBeaconName + fieldTxPower + footer);
+
+  Serial.println(query.c_str());
+
+  client.print(query);
+  readResponse(&client);
+
+}
+
+
 void setup()
 {
     Serial.begin(115200);
     while(!Serial){delay(100);}
-
+  
     BLEDevice::init("");
     pBLEScan = BLEDevice::getScan(); //create new scan
     pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
@@ -163,9 +190,8 @@ void setup()
 }
 
 void loop(){
-  WiFiClient client;
 
-    bool isConnected = true;
+  bool isConnected = true;
 
   if (WiFi.status() != WL_CONNECTED) {
     if (!WiFiconnect()) {
@@ -179,38 +205,9 @@ void loop(){
     //Serial.print(F("Devices found: "));
     //Serial.println(foundDevices.getCount());
     pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
-    
-    //Serial.println("myBeaconsLen");
-    //Serial.println(myBeaconsLen);
-  
+   
   }
   
   delay(scanDelay);  
   
-//  String footer = String(" HTTP/1.1\r\n") + "Host: " + String(host) + "\r\n" + "Connection: close\r\n\r\n";
-//
-//  // WRITE --------------------------------------------------------------------------------------------
-//  if (!client.connect(host, httpPort)) {
-//    return;
-//  }
-//
-//  client.print("GET /update?api_key=" + writeApiKey + "&field1=" + field1 + footer);
-//  readResponse(&client);
-//
-//  // READ --------------------------------------------------------------------------------------------
-//
-//  String readRequest = "GET /channels/" + channelID + "/fields/" + fieldNumber + ".json?results=" + numberOfResults + " HTTP/1.1\r\n" +
-//                       "Host: " + host + "\r\n" +
-//                       "Connection: close\r\n\r\n";
-//
-//  if (!client.connect(host, httpPort)) {
-//    return;
-//  }
-//
-//  client.print(readRequest);
-//  readResponse(&client);
-//
-//  // -------------------------------------------------------------------------------------------------
-//
-//  ++field1;
 }
