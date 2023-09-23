@@ -20,7 +20,7 @@ const char* writeApiKey = Config::writeAPIKey;
 //int field1 = 0;
 
 int scanTime = 5; //In seconds
-int scanDelay = (1000 * 10); //In miliseconds
+int scanDelay = (3000 * 10); //In miliseconds
 int counter;
 
 BLEScan *pBLEScan;
@@ -99,6 +99,17 @@ void readResponse(WiFiClient *client){
   Serial.printf("\nClosing connection\n\n");
 }
 
+class MyBLEBeacon
+{
+  public:
+    String address;
+    String name;
+    String RSSI;
+    String txPower;  
+};
+
+MyBLEBeacon myBLEBeacon;
+
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
     void onResult(BLEAdvertisedDevice advertisedDevice)
@@ -107,16 +118,11 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
       if(isKnownAddress(advertisedDevice.getAddress())) 
       {
 
-        String myMac = WiFi.macAddress();
         String bleAddress = advertisedDevice.getAddress().toString().c_str();
         String bleName = "";
         String bleRSSI = "" ;
         String bleTxPower = ""; 
 
-        Serial.print(F("Device address: "));
-        //Serial.println(ESP.getEfuseMac());
-        Serial.println(myMac);
-        
         Serial.println(advertisedDevice.getAddress().toString().c_str());
         
         if (advertisedDevice.haveName())
@@ -143,14 +149,21 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str()); 
 
         // write to the ThingSpeak channel
-        send(myMac, bleAddress, bleName, bleRSSI, bleTxPower);
+        //send(bleAddress, bleName, bleRSSI, bleTxPower);
+
+        // #hack: ugly hack for now (have a chance to work if only 1 BLE suppported)
+        // should add to list
+        myBLEBeacon.address = bleAddress;
+        myBLEBeacon.name = bleName;
+        myBLEBeacon.RSSI = bleRSSI;
+        myBLEBeacon.txPower = bleTxPower;
 
       }
     }
 };
 
 
-void send(String myMac, String bleAddress, String bleName, String bleRSSI, String bleTxPower)
+void send(String bleAddress, String bleName, String bleRSSI, String bleTxPower)
 {
   WiFiClient client;
   String footer = String(" HTTP/1.1\r\n") + "Host: " + String(host) + "\r\n" + "Connection: close\r\n\r\n";
@@ -159,7 +172,10 @@ void send(String myMac, String bleAddress, String bleName, String bleRSSI, Strin
     return;
   }
 
-  String fieldScannerId = "&field1=" + myMac;
+  //Serial.print(F("Device address: "));
+  //Serial.println(ESP.getEfuseMac());
+        
+  String fieldScannerId = "&field1=" + WiFi.macAddress();
   String fieldBeaconMacAddress = "&field2=" + bleAddress;
   String fieldBeaconRSSI = "&field3=" + bleRSSI;
   String fieldBeaconName = "&field4=" + bleName;
@@ -180,6 +196,7 @@ void setup()
 {
     Serial.begin(115200);
     while(!Serial){delay(100);}
+    Serial.println("...[SETUP]...");
   
     BLEDevice::init("");
     pBLEScan = BLEDevice::getScan(); //create new scan
@@ -205,6 +222,12 @@ void loop(){
     //Serial.print(F("Devices found: "));
     //Serial.println(foundDevices.getCount());
     pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
+
+    // #hack
+    // should iterate on list
+    if (myBLEBeacon.address) {
+      send(myBLEBeacon.address, myBLEBeacon.name, myBLEBeacon.RSSI, myBLEBeacon.txPower);
+    }
    
   }
   
