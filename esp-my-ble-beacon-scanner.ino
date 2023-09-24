@@ -12,7 +12,7 @@
 
 
 #include "MyBLEBeacon.h";
-//#include "MyBLEQueue.h";
+#include "MyBLEQueue.h";
 
 
 const char* ssid = Config::ssid;
@@ -30,10 +30,10 @@ int scanTime = 5; //In seconds
 int scanDelay = (3000 * 10); //In miliseconds
 
 BLEScan* pBLEScan;
-//MyBLEQueue * myBLEQueue = new MyBLEQueue();
+MyBLEQueue * myBLEQueue = new MyBLEQueue();
 
-MyBLEBeacon* foundBeacons[10];
-int foundBeaconsLen = 0;
+//MyBLEBeacon* foundBeacons[10];
+//int foundBeaconsLen = 0;
 
 
 boolean isKnownAddress(BLEAddress address)
@@ -141,8 +141,12 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str()); 
 
         // write to the ThingSpeak channel
-        foundBeacons[foundBeaconsLen] = new MyBLEBeacon(bleAddress, bleName, bleRSSI, bleTxPower);
-        foundBeaconsLen++;
+        //foundBeacons[foundBeaconsLen] = new MyBLEBeacon(bleAddress, bleName, bleRSSI, bleTxPower);
+        //foundBeaconsLen++;
+        
+        myBLEQueue->push(
+            new MyBLEBeacon(bleAddress, bleName, bleRSSI, bleTxPower)  
+        );
       }
     }
 };
@@ -207,22 +211,19 @@ void loop(){
     //Serial.println(foundDevices.getCount());
     pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
 
-/*
+
     MyBLEBeacon * beacon;
-    Serial.println("QUEUE SIZE");
-    Serial.println(myBLEQueue->getSize());
-    
+
     while(!myBLEQueue->isEmpty())
     {
       beacon = myBLEQueue->pop();
       Serial.println("POP");  
       Serial.println(beacon->address);
-      //send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
-      //Serial.println("SEND DONE\n\n\n\n\n");
-      //delete beacon;        
+      send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
+      delete beacon;        
     }
-*/     
-      
+     
+/*      
     MyBLEBeacon* beacon;
     for (int i = 0; i < foundBeaconsLen; i++)
     {
@@ -234,7 +235,7 @@ void loop(){
     //Serial.print("foundBeaconsLen ");
     //Serial.println(foundBeaconsLen);
     foundBeaconsLen = 0;
-
+*/
   }
   
   delay(scanDelay);  

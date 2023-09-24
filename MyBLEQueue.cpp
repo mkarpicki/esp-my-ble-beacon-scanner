@@ -97,6 +97,7 @@ MyBLEQueue::QueueItem::QueueItem(MyBLEBeacon * element)
 {
   value = new MyBLEBeacon();
   *value = *element;
+  next = NULL;
 }
 
 
