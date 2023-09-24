@@ -112,6 +112,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
     void onResult(BLEAdvertisedDevice advertisedDevice)
     {
 
+      Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str()); 
+      
       if(isKnownAddress(advertisedDevice.getAddress())) 
       {
 
@@ -120,7 +122,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         String bleRSSI = "" ;
         String bleTxPower = ""; 
         
-        Serial.println(F("Found BLE"));
+        Serial.println(F("Found KNOWN BLE"));
         Serial.println(advertisedDevice.getAddress().toString().c_str());
         
         if (advertisedDevice.haveName())
