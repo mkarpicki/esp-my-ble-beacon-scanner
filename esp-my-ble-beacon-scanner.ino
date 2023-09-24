@@ -217,8 +217,6 @@ void loop(){
     while(!myBLEQueue->isEmpty())
     {
       beacon = myBLEQueue->pop();
-      Serial.println("POP");  
-      Serial.println(beacon->address);
       send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
       delete beacon;        
     }
