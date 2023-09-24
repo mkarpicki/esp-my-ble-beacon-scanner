@@ -8,25 +8,32 @@
 #include <BLEEddystoneURL.h>
 #include <BLEEddystoneTLM.h>
 #include <BLEBeacon.h>
+#include <Arduino.h>
+
+
+#include "MyBLEBeacon.h";
+//#include "MyBLEQueue.h";
+
 
 const char* ssid = Config::ssid;
 const char* password = Config::password;
+
+const char **myBeacons = Config::beaconAddresses;
+const unsigned int myBeaconsLen = Config::beaconAddressesLength;
 
 const char* host = "api.thingspeak.com"; 
 const int httpPort = 80;
 const unsigned int channelID = Config::channelID;
 const char* writeApiKey = Config::writeAPIKey;
 
-//int field1 = 0;
-
 int scanTime = 5; //In seconds
 int scanDelay = (3000 * 10); //In miliseconds
 int counter;
 
 BLEScan *pBLEScan;
+MyBLEBeacon myBLEBeacon;
+//MyBLEQueue * myBLEQueue = new MyBLEQueue();
 
-const char **myBeacons = Config::beaconAddresses;
-const unsigned int myBeaconsLen = Config::beaconAddressesLength;
 
 boolean isKnownAddress(BLEAddress address)
 {
@@ -99,17 +106,6 @@ void readResponse(WiFiClient *client){
   Serial.printf("\nClosing connection\n\n");
 }
 
-class MyBLEBeacon
-{
-  public:
-    String address;
-    String name;
-    String RSSI;
-    String txPower;  
-};
-
-MyBLEBeacon myBLEBeacon;
-
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 {
     void onResult(BLEAdvertisedDevice advertisedDevice)
@@ -122,7 +118,9 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         String bleName = "";
         String bleRSSI = "" ;
         String bleTxPower = ""; 
+        
 
+        Serial.println(F("Found BLE"));
         Serial.println(advertisedDevice.getAddress().toString().c_str());
         
         if (advertisedDevice.haveName())
@@ -158,6 +156,20 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         myBLEBeacon.RSSI = bleRSSI;
         myBLEBeacon.txPower = bleTxPower;
 
+//        MyBLEBeacon * beacon = new MyBLEBeacon();
+//        beacon->address = bleAddress;
+//        beacon->name = bleName;
+//        beacon->RSSI = bleRSSI;
+//        beacon->txPower = bleTxPower;
+//
+//        myBLEQueue->push(beacon);
+//
+//        Serial.println("PUSH");
+//        Serial.println(beacon->address);
+        
+//        myBLEQueue->push(
+//          new MyBLEBeacon(bleAddress, bleName, bleRSSI, bleTxPower) 
+//        );
       }
     }
 };
@@ -209,7 +221,7 @@ void setup()
 void loop(){
 
   bool isConnected = true;
-
+  
   if (WiFi.status() != WL_CONNECTED) {
     if (!WiFiconnect()) {
       isConnected = false;     
@@ -217,7 +229,7 @@ void loop(){
   }
 
   if (isConnected) {
-    
+
     BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
     //Serial.print(F("Devices found: "));
     //Serial.println(foundDevices.getCount());
@@ -228,6 +240,17 @@ void loop(){
     if (myBLEBeacon.address) {
       send(myBLEBeacon.address, myBLEBeacon.name, myBLEBeacon.RSSI, myBLEBeacon.txPower);
     }
+
+//    MyBLEBeacon * beacon;
+//    while(!myBLEQueue->isEmpty())
+//    {
+//      beacon = myBLEQueue->pop();
+//      Serial.println("POP");  
+//      Serial.println(beacon->address);
+//      send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
+//      Serial.println("SEND DONE\n\n\n\n\n");
+//      //delete beacon;        
+//    }
    
   }
   
