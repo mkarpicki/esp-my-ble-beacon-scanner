@@ -12,6 +12,7 @@ class MyBLEQueue
     bool push(MyBLEBeacon *);
     MyBLEBeacon * pop();
     bool isEmpty();
+    int getSize();
 
   private:
   

@@ -156,17 +156,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         myBLEBeacon.RSSI = bleRSSI;
         myBLEBeacon.txPower = bleTxPower;
 
-//        MyBLEBeacon * beacon = new MyBLEBeacon();
-//        beacon->address = bleAddress;
-//        beacon->name = bleName;
-//        beacon->RSSI = bleRSSI;
-//        beacon->txPower = bleTxPower;
-//
-//        myBLEQueue->push(beacon);
-//
 //        Serial.println("PUSH");
-//        Serial.println(beacon->address);
-        
+//        
 //        myBLEQueue->push(
 //          new MyBLEBeacon(bleAddress, bleName, bleRSSI, bleTxPower) 
 //        );
@@ -242,14 +233,16 @@ void loop(){
     }
 
 //    MyBLEBeacon * beacon;
+//    Serial.println("QUEUE SIZE");
+//    Serial.println(myBLEQueue->getSize());
 //    while(!myBLEQueue->isEmpty())
 //    {
 //      beacon = myBLEQueue->pop();
 //      Serial.println("POP");  
 //      Serial.println(beacon->address);
-//      send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
-//      Serial.println("SEND DONE\n\n\n\n\n");
-//      //delete beacon;        
+////      send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
+////      Serial.println("SEND DONE\n\n\n\n\n");
+////      //delete beacon;        
 //    }
    
   }

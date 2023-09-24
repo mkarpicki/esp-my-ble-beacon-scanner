@@ -80,6 +80,10 @@ bool MyBLEQueue::isEmpty()
   return (firstItem == NULL) ? true : false;
 }
 
+int MyBLEQueue::getSize()
+{
+  return currentSize;
+}
 
 /*******************************/
 // private sub class
