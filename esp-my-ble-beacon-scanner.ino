@@ -28,16 +28,17 @@ const char* writeApiKey = Config::writeAPIKey;
 
 int scanTime = 5; //In seconds
 int scanDelay = (3000 * 10); //In miliseconds
-int counter;
 
-BLEScan *pBLEScan;
-MyBLEBeacon myBLEBeacon;
+BLEScan* pBLEScan;
 //MyBLEQueue * myBLEQueue = new MyBLEQueue();
+
+MyBLEBeacon* foundBeacons[10];
+int foundBeaconsLen = 0;
 
 
 boolean isKnownAddress(BLEAddress address)
 {
-   for (counter = 0; counter < myBeaconsLen; counter++) 
+   for (int counter = 0; counter < myBeaconsLen; counter++) 
    {      
       if (strcmp (address.toString().c_str(), myBeacons[counter]) == 0) {
           return true;           
@@ -119,48 +120,29 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
         String bleRSSI = "" ;
         String bleTxPower = ""; 
         
-
         Serial.println(F("Found BLE"));
         Serial.println(advertisedDevice.getAddress().toString().c_str());
         
         if (advertisedDevice.haveName())
         {
           bleName = advertisedDevice.getName().c_str();
-          //Serial.print(F("Device name: "));
-          //Serial.println(advertisedDevice.getName().c_str());
         }
   
         if (advertisedDevice.haveRSSI())
         {
           bleRSSI = String( advertisedDevice.getRSSI() );
-          //Serial.print(F("Device RSSI: "));
-          //Serial.println(advertisedDevice.getRSSI());
         }      
   
         if (advertisedDevice.haveTXPower())
         {
           bleTxPower = String(advertisedDevice.getTXPower());
-          //Serial.print(F("Device TXPower: "));
-          //Serial.println(advertisedDevice.getTXPower());
         }
 
         Serial.printf("Advertised Device: %s \n", advertisedDevice.toString().c_str()); 
 
         // write to the ThingSpeak channel
-        //send(bleAddress, bleName, bleRSSI, bleTxPower);
-
-        // #hack: ugly hack for now (have a chance to work if only 1 BLE suppported)
-        // should add to list
-        myBLEBeacon.address = bleAddress;
-        myBLEBeacon.name = bleName;
-        myBLEBeacon.RSSI = bleRSSI;
-        myBLEBeacon.txPower = bleTxPower;
-
-//        Serial.println("PUSH");
-//        
-//        myBLEQueue->push(
-//          new MyBLEBeacon(bleAddress, bleName, bleRSSI, bleTxPower) 
-//        );
+        foundBeacons[foundBeaconsLen] = new MyBLEBeacon(bleAddress, bleName, bleRSSI, bleTxPower);
+        foundBeaconsLen++;
       }
     }
 };
@@ -175,7 +157,6 @@ void send(String bleAddress, String bleName, String bleRSSI, String bleTxPower)
     return;
   }
 
-  //Serial.print(F("Device address: "));
   //Serial.println(ESP.getEfuseMac());
         
   String fieldScannerId = "&field1=" + WiFi.macAddress();
@@ -226,25 +207,34 @@ void loop(){
     //Serial.println(foundDevices.getCount());
     pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
 
-    // #hack
-    // should iterate on list
-    if (myBLEBeacon.address) {
-      send(myBLEBeacon.address, myBLEBeacon.name, myBLEBeacon.RSSI, myBLEBeacon.txPower);
+/*
+    MyBLEBeacon * beacon;
+    Serial.println("QUEUE SIZE");
+    Serial.println(myBLEQueue->getSize());
+    
+    while(!myBLEQueue->isEmpty())
+    {
+      beacon = myBLEQueue->pop();
+      Serial.println("POP");  
+      Serial.println(beacon->address);
+      //send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
+      //Serial.println("SEND DONE\n\n\n\n\n");
+      //delete beacon;        
     }
+*/     
+      
+    MyBLEBeacon* beacon;
+    for (int i = 0; i < foundBeaconsLen; i++)
+    {
+       beacon = foundBeacons[i];
+       //Serial.println(beacon->address);
+       send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
+       delete beacon;
+    }
+    //Serial.print("foundBeaconsLen ");
+    //Serial.println(foundBeaconsLen);
+    foundBeaconsLen = 0;
 
-//    MyBLEBeacon * beacon;
-//    Serial.println("QUEUE SIZE");
-//    Serial.println(myBLEQueue->getSize());
-//    while(!myBLEQueue->isEmpty())
-//    {
-//      beacon = myBLEQueue->pop();
-//      Serial.println("POP");  
-//      Serial.println(beacon->address);
-////      send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
-////      Serial.println("SEND DONE\n\n\n\n\n");
-////      //delete beacon;        
-//    }
-   
   }
   
   delay(scanDelay);  
