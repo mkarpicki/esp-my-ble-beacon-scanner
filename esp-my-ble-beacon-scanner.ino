@@ -1,6 +1,8 @@
 #include <Config.h>
 #include <WiFi.h>
 
+//#include <time.h>
+
 #include <BLEDevice.h>
 #include <BLEUtils.h>
 #include <BLEScan.h>
@@ -15,6 +17,14 @@
 #include "MyBLEQueue.h";
 
 
+#define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
+#define TIME_TO_SLEEP  60        /* Time ESP32 will go to sleep (in seconds) */
+#define FAST_TIME_TO_SLEEP  5
+
+RTC_DATA_ATTR int bootCount = 0;
+
+
+
 const char* ssid = Config::ssid;
 const char* password = Config::password;
 
@@ -26,8 +36,12 @@ const int httpPort = 80;
 const unsigned int channelID = Config::channelID;
 const char* writeApiKey = Config::writeAPIKey;
 
+//const char* ntpServer = "pool.ntp.org";
+//const long  gmtOffset_sec = 3600;
+//const int   daylightOffset_sec = 3600;
+
 int scanTime = 5; //In seconds
-int scanDelay = (3000 * 10); //In miliseconds
+//int scanDelay = (1000 * 60); //In miliseconds
 
 BLEScan* pBLEScan;
 MyBLEQueue * myBLEQueue = new MyBLEQueue();
@@ -181,63 +195,108 @@ void send(String bleAddress, String bleName, String bleRSSI, String bleTxPower)
 
 }
 
+tm getLocalTime()
+{
+  struct tm timeinfo;
+  getLocalTime(&timeinfo);
+  //Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
+  
+  return timeinfo;
+}
+
+int getLocalSeconds()
+{
+  int seconds = 0;  
+  struct tm timeinfo = getLocalTime();
+  if (&timeinfo != NULL)
+  {
+    seconds = timeinfo.tm_sec;
+  }
+  return seconds;
+    
+}
 
 void setup()
 {
+
     Serial.begin(115200);
     while(!Serial){delay(100);}
     Serial.println("...[SETUP]...");
+
+    // Init and get the time
+    if (WiFiconnect())
+    {
+    
+//      configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+//      Serial.print("getLocalSeconds() : ");
+//      Serial.println(getLocalSeconds());
+//      //wait till equal time (sync many devices to send information around same second)
+//      delay(
+//        (60 - getLocalSeconds()) * 1000
+//      );
+
+      esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * uS_TO_S_FACTOR);
+    
+      BLEDevice::init("");
+      pBLEScan = BLEDevice::getScan(); //create new scan
+      pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+      pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
+      pBLEScan->setInterval(100);
+      pBLEScan->setWindow(99);  // less or equal setInterval value
+      
+      BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+      //Serial.print(F("Devices found: "));
+      //Serial.println(foundDevices.getCount());
+      pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
   
-    BLEDevice::init("");
-    pBLEScan = BLEDevice::getScan(); //create new scan
-    pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
-    pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
-    pBLEScan->setInterval(100);
-    pBLEScan->setWindow(99);  // less or equal setInterval value
+  
+      MyBLEBeacon * beacon;
+  
+      while(!myBLEQueue->isEmpty())
+      {
+        beacon = myBLEQueue->pop();
+        send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
+        delete beacon;        
+      }
+             
+    }
+    else
+    {
+      esp_sleep_enable_timer_wakeup(FAST_TIME_TO_SLEEP * uS_TO_S_FACTOR);
+    }
+
+    esp_deep_sleep_start();
 }
 
 void loop(){
 
-  bool isConnected = true;
-  
-  if (WiFi.status() != WL_CONNECTED) {
-    if (!WiFiconnect()) {
-      isConnected = false;     
-    }    
-  }
-
-  if (isConnected) {
-
-    BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
-    //Serial.print(F("Devices found: "));
-    //Serial.println(foundDevices.getCount());
-    pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
-
-
-    MyBLEBeacon * beacon;
-
-    while(!myBLEQueue->isEmpty())
-    {
-      beacon = myBLEQueue->pop();
-      send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
-      delete beacon;        
-    }
-     
-/*      
-    MyBLEBeacon* beacon;
-    for (int i = 0; i < foundBeaconsLen; i++)
-    {
-       beacon = foundBeacons[i];
-       //Serial.println(beacon->address);
-       send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
-       delete beacon;
-    }
-    //Serial.print("foundBeaconsLen ");
-    //Serial.println(foundBeaconsLen);
-    foundBeaconsLen = 0;
-*/
-  }
-  
-  delay(scanDelay);  
+//  bool isConnected = true;
+//  
+//  if (WiFi.status() != WL_CONNECTED) {
+//    if (!WiFiconnect()) {
+//      isConnected = false;     
+//    }    
+//  }
+//
+//  if (isConnected) {
+//
+//    BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
+//    //Serial.print(F("Devices found: "));
+//    //Serial.println(foundDevices.getCount());
+//    pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
+//
+//
+//    MyBLEBeacon * beacon;
+//
+//    while(!myBLEQueue->isEmpty())
+//    {
+//      beacon = myBLEQueue->pop();
+//      send(beacon->address, beacon->name, beacon->RSSI, beacon->txPower);
+//      delete beacon;        
+//    }
+//     
+//  }
+//  
+//  delay(scanDelay);  
   
 }
