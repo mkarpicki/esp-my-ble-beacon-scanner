@@ -5,11 +5,11 @@ MyBLEBeacon::MyBLEBeacon(void)
 {
   address = "";
   name = "";
-  RSSI = "";
+  RSSI = 0;
   txPower = "";
 }
 
-MyBLEBeacon::MyBLEBeacon(String address, String name, String RSSI, String txPower)
+MyBLEBeacon::MyBLEBeacon(String address, String name, int RSSI, String txPower)
 {
   this->address = address;
   this->name = name;

@@ -7,10 +7,10 @@
   {
     public:
       MyBLEBeacon();
-      MyBLEBeacon(String, String, String, String);
+      MyBLEBeacon(String, String, int, String);
       String address;
       String name;
-      String RSSI;
+      int RSSI;
       String txPower;  
   };
 

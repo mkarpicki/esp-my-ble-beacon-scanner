@@ -31,10 +31,17 @@ const char* password = Config::password;
 const char **myBeacons = Config::beaconAddresses;
 const unsigned int myBeaconsLen = Config::beaconAddressesLength;
 
+
 const char* host = "api.thingspeak.com"; 
 const int httpPort = 80;
+
 const unsigned int channelID = Config::channelID;
 const char* writeApiKey = Config::writeAPIKey;
+
+const unsigned int isHomeChannelID = Config::isHomeChannelID;
+const char* isHomeWriteApiKey = Config::isHomeWriteAPIKey;
+const bool isHome = Config::isHome;
+
 
 //const char* ntpServer = "pool.ntp.org";
 //const long  gmtOffset_sec = 3600;
@@ -133,7 +140,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 
         String bleAddress = advertisedDevice.getAddress().toString().c_str();
         String bleName = "";
-        String bleRSSI = "" ;
+        //String bleRSSI = "" ;
+        int bleRSSI = 0 ;
         String bleTxPower = ""; 
         
         Serial.println(F("Found KNOWN BLE"));
@@ -146,7 +154,8 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
   
         if (advertisedDevice.haveRSSI())
         {
-          bleRSSI = String( advertisedDevice.getRSSI() );
+          //bleRSSI = String( advertisedDevice.getRSSI() );
+          bleRSSI = advertisedDevice.getRSSI();
         }      
   
         if (advertisedDevice.haveTXPower())
@@ -168,7 +177,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks
 };
 
 
-void send(String bleAddress, String bleName, String bleRSSI, String bleTxPower)
+void send(String bleAddress, String bleName, int bleRSSI, String bleTxPower)
 {
   WiFiClient client;
   String footer = String(" HTTP/1.1\r\n") + "Host: " + String(host) + "\r\n" + "Connection: close\r\n\r\n";
@@ -181,10 +190,13 @@ void send(String bleAddress, String bleName, String bleRSSI, String bleTxPower)
         
   String fieldScannerId = "&field1=" + WiFi.macAddress();
   String fieldBeaconMacAddress = "&field2=" + bleAddress;
-  String fieldBeaconRSSI = "&field3=" + bleRSSI;
+  String fieldBeaconRSSI = "&field3=" + String(bleRSSI);
   String fieldBeaconName = "&field4=" + bleName;
   String fieldTxPower = "&field5=" + bleTxPower;
   String fieldTimestamp = "&field6=";
+
+  unsigned int homePosition = 0;
+  const int estimatedOneMeterSignal = -62;
 
   String query = String("GET /update?api_key=" + String(writeApiKey) + fieldScannerId + fieldBeaconMacAddress + fieldBeaconRSSI +fieldBeaconName + fieldTxPower + footer);
 
@@ -192,6 +204,20 @@ void send(String bleAddress, String bleName, String bleRSSI, String bleTxPower)
 
   client.print(query);
   readResponse(&client);
+
+  if (isHome) {
+    if (!client.connect(host, httpPort)) {
+      return;
+    }    
+    if (bleRSSI > estimatedOneMeterSignal) {
+      homePosition = 1;
+    }
+    String isHomeQuery = String("GET /update?api_key=" + String(isHomeWriteApiKey) + "&field1=" + String(homePosition) + footer);
+    Serial.println(isHomeQuery.c_str());
+    
+    client.print(isHomeQuery);
+    readResponse(&client);
+  }
 
 }
 
@@ -222,6 +248,7 @@ void setup()
     Serial.begin(115200);
     while(!Serial){delay(100);}
     Serial.println("...[SETUP]...");
+    Serial.println(WiFi.macAddress());
 
     // Init and get the time
     if (WiFiconnect())
