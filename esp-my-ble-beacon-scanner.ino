@@ -18,8 +18,11 @@
 
 
 #define uS_TO_S_FACTOR 1000000ULL  /* Conversion factor for micro seconds to seconds */
-#define TIME_TO_SLEEP  30        /* Time ESP32 will go to sleep (in seconds) */
+#define TIME_TO_SLEEP  15        /* Time ESP32 will go to sleep (in seconds) */
 #define FAST_TIME_TO_SLEEP  10
+
+#define D2 2
+#define D4 4
 
 RTC_DATA_ATTR int bootCount = 0;
 
@@ -195,8 +198,8 @@ void send(String bleAddress, String bleName, int bleRSSI, String bleTxPower)
   String fieldTxPower = "&field5=" + bleTxPower;
   String fieldTimestamp = "&field6=";
 
-  unsigned int homePosition = 0;
-  const int estimatedOneMeterSignal = -62;
+//  unsigned int homePosition = 0;
+//  const int estimatedOneMeterSignal = -62;
 
   String query = String("GET /update?api_key=" + String(writeApiKey) + fieldScannerId + fieldBeaconMacAddress + fieldBeaconRSSI +fieldBeaconName + fieldTxPower + footer);
 
@@ -209,10 +212,10 @@ void send(String bleAddress, String bleName, int bleRSSI, String bleTxPower)
     if (!client.connect(host, httpPort)) {
       return;
     }    
-    if (bleRSSI > estimatedOneMeterSignal) {
-      homePosition = 1;
-    }
-    String isHomeQuery = String("GET /update?api_key=" + String(isHomeWriteApiKey) + "&field1=" + String(homePosition) + footer);
+//    if (bleRSSI > estimatedOneMeterSignal) {
+//      homePosition = 1;
+//    }
+    String isHomeQuery = String("GET /update?api_key=" + String(isHomeWriteApiKey) + "&field1=" + String(bleRSSI) + footer);
     Serial.println(isHomeQuery.c_str());
     
     client.print(isHomeQuery);
@@ -242,13 +245,29 @@ int getLocalSeconds()
     
 }
 
+void ledPrepare() {
+  pinMode(D2, OUTPUT);     // Initialize the LED_BUILTIN pin as an output
+  pinMode(D4, OUTPUT);
+}
+
+void ledOn() {
+  digitalWrite(D2, HIGH);
+  digitalWrite(D4, LOW);
+}
+
 void setup()
 {
 
     Serial.begin(115200);
     while(!Serial){delay(100);}
     Serial.println("...[SETUP]...");
+    Serial.print("isHome: ");
+    Serial.println(isHome);
     Serial.println(WiFi.macAddress());
+
+    ledPrepare();
+    ledOn();
+    
 
     // Init and get the time
     if (WiFiconnect())
@@ -297,6 +316,7 @@ void setup()
 
 void loop(){
 
+    ledOn();
 //  bool isConnected = true;
 //  
 //  if (WiFi.status() != WL_CONNECTED) {
